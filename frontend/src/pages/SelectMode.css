@@ -1,0 +1,233 @@
+.select-container {
+  min-height: 100vh;
+  background: url('/picture/图片1.png') center/cover no-repeat;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.select-container::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(180deg,
+    rgba(90, 154, 138, 0.85) 0%,
+    rgba(122, 184, 168, 0.88) 30%,
+    rgba(142, 200, 184, 0.9) 50%,
+    rgba(122, 184, 168, 0.88) 70%,
+    rgba(90, 154, 138, 0.85) 100%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 飘落花瓣装饰 */
+.select-container::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image:
+    radial-gradient(circle 3px at 10% 20%, rgba(255, 200, 200, 0.3) 0%, transparent 100%),
+    radial-gradient(circle 2px at 80% 15%, rgba(255, 180, 180, 0.25) 0%, transparent 100%),
+    radial-gradient(circle 4px at 60% 10%, rgba(255, 190, 190, 0.2) 0%, transparent 100%),
+    radial-gradient(circle 2px at 30% 8%, rgba(255, 200, 200, 0.2) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 0;
+  animation: petalFloat 8s ease-in-out infinite;
+}
+
+@keyframes petalFloat {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(10px) rotate(5deg); }
+}
+
+.select-header {
+  background: rgba(255, 255, 255, 0.92);
+  padding: 0.8rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 10;
+}
+
+.select-header .ldy-title {
+  text-align: center;
+  flex: 1;
+}
+
+.select-header .ldy-title .quote {
+  font-size: 1.2rem;
+  color: #5a8a7a;
+  margin: 0;
+  font-style: italic;
+  letter-spacing: 0.15em;
+}
+
+.select-header .user-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.select-header .user-info span {
+  color: #3a5a4a;
+  font-size: 0.9rem;
+}
+
+.logout-btn {
+  padding: 0.4rem 1.2rem;
+  background: #e8e0d0;
+  color: #5a4a3a;
+  border: 2px solid #c0b8a8;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.3s;
+  font-weight: 500;
+}
+
+.logout-btn:hover {
+  background: #d8d0c0;
+  transform: translateY(-1px);
+}
+
+.select-main {
+  flex: 1;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 3rem 2rem;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+.select-title {
+  font-size: 2.2rem;
+  color: #ffffff;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.mode-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.mode-card {
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 20px;
+  padding: 2.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  position: relative;
+  overflow: hidden;
+  border: 2px solid transparent;
+}
+
+.mode-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  background: linear-gradient(90deg, transparent, #5a9a8a, transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.mode-card:hover::before {
+  opacity: 1;
+}
+
+.mode-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  border-color: #5a9a8a;
+}
+
+.card-icon {
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.card-icon img {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  border-radius: 12px;
+}
+
+.mode-card h2 {
+  font-size: 1.6rem;
+  color: #2c5a4a;
+  margin-bottom: 1rem;
+}
+
+.mode-card p {
+  color: #5a7a6a;
+  font-size: 1rem;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
+
+.card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.card-tags span {
+  background: #f0f6f4;
+  color: #5a7a6a;
+  padding: 0.3rem 0.8rem;
+  border-radius: 15px;
+  font-size: 0.85rem;
+  border: 1px solid #d0e8e0;
+}
+
+.mode-card:hover .card-tags span {
+  background: rgba(90, 154, 138, 0.1);
+  color: #2c5a4a;
+  border-color: #5a9a8a;
+}
+
+@media (max-width: 768px) {
+  .select-title {
+    font-size: 1.6rem;
+  }
+
+  .mode-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .mode-card {
+    padding: 2rem;
+  }
+
+  .select-header {
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.8rem 1rem;
+  }
+
+  .select-header .ldy-title h1 {
+    font-size: 1.2rem;
+  }
+}

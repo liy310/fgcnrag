@@ -1,0 +1,1158 @@
+/* ==================== 林黛玉 · 诗词世界 主题样式 ==================== */
+
+/* 字体引入 */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500;600&display=swap');
+
+/* ==================== 色彩系统 ==================== */
+:root {
+  /* 主色调 - 深黛青系 */
+  --deep-jade: #2C4A3F;
+  --soft-jade: #5A7C6E;
+  --light-jade: #8BA89B;
+  
+  /* 背景色 - 月白系 */
+  --moon-white: #F5F7F6;
+  --silver-white: #E8ECEA;
+  --pale-jade: #F8FAF9;
+  --card-white: #FFFFFF;
+  
+  /* 文字色 */
+  --text-primary: #1F2925;
+  --text-secondary: #4A5550;
+  --text-muted: #94A39C;
+  
+  /* 边框与装饰 */
+  --border-light: #C5D4CC;
+  --border-focus: #5A7C6E;
+  --shadow-soft: rgba(44, 74, 63, 0.08);
+  --shadow-medium: rgba(44, 74, 63, 0.12);
+}
+
+/* ==================== 基础重置 ==================== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  background: linear-gradient(135deg, var(--moon-white) 0%, var(--silver-white) 100%);
+  color: var(--text-primary);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+/* ==================== 登录页面 ==================== */
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--moon-white) 0%, var(--silver-white) 100%);
+  padding: 1rem;
+}
+
+.login-card {
+  background: var(--card-white);
+  padding: 2.5rem 2rem;
+  border-radius: 16px;
+  border: 1px solid var(--border-light);
+  box-shadow: 0 4px 24px var(--shadow-soft);
+  width: 100%;
+  max-width: 380px;
+  transition: box-shadow 0.3s;
+}
+
+.login-card:hover {
+  box-shadow: 0 8px 32px var(--shadow-medium);
+}
+
+.login-card .subtitle {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: var(--deep-jade);
+  text-align: center;
+  margin-bottom: 2rem;
+  letter-spacing: 2px;
+}
+
+.login-card input {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  font-size: 1rem;
+  font-family: inherit;
+  background: var(--pale-jade);
+  color: var(--text-primary);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.login-card input::placeholder {
+  color: var(--text-muted);
+}
+
+.login-card input:focus {
+  outline: none;
+  border-color: var(--deep-jade);
+  box-shadow: 0 0 0 3px rgba(90, 124, 110, 0.12);
+  background: var(--card-white);
+}
+
+.login-card button[type="submit"] {
+  width: 100%;
+  padding: 1rem;
+  background: linear-gradient(135deg, var(--deep-jade) 0%, var(--soft-jade) 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.05rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-top: 0.5rem;
+  letter-spacing: 2px;
+}
+
+.login-card button[type="submit"]:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(44, 74, 63, 0.25);
+  background: linear-gradient(135deg, var(--soft-jade) 0%, var(--deep-jade) 100%);
+}
+
+.login-card button[type="submit"]:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.switch-mode {
+  text-align: center;
+  margin-top: 1.5rem;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.switch-mode button {
+  background: none;
+  border: none;
+  color: var(--deep-jade);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.95rem;
+  padding: 0;
+  margin-left: 0.5rem;
+  position: relative;
+  transition: color 0.2s;
+}
+
+.switch-mode button::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: var(--deep-jade);
+  transition: width 0.3s;
+}
+
+.switch-mode button:hover::after {
+  width: 100%;
+}
+
+.error {
+  color: #b85c5c;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  text-align: center;
+  padding: 0.75rem;
+  background: #fdf2f2;
+  border-radius: 8px;
+}
+
+/* ==================== 首页 ==================== */
+.home-container {
+  min-height: 100vh;
+}
+
+.header {
+  background: var(--deep-jade);
+  color: white;
+  padding: 1rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header button {
+  background: rgba(255,255,255,0.15);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.25);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.header button:hover {
+  background: rgba(255,255,255,0.25);
+}
+
+.user-info span {
+  margin-right: 1rem;
+  color: rgba(255,255,255,0.9);
+}
+
+.main-content {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem;
+}
+
+.main-title {
+  font-family: 'Noto Serif SC', serif;
+  text-align: center;
+  font-size: 2rem;
+  color: var(--deep-jade);
+  margin-bottom: 0.75rem;
+  letter-spacing: 3px;
+}
+
+.main-subtitle {
+  text-align: center;
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 1rem;
+  margin-bottom: 2.5rem;
+  font-family: 'Noto Serif SC', serif;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.25rem;
+}
+
+.feature-card {
+  background: var(--card-white);
+  padding: 1.75rem 1.5rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+  box-shadow: 0 2px 12px var(--shadow-soft);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: center;
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px var(--shadow-medium);
+  border-color: var(--soft-jade);
+}
+
+.feature-icon {
+  font-size: 2.2rem;
+  margin-bottom: 1rem;
+}
+
+.feature-card h2 {
+  color: var(--deep-jade);
+  margin-bottom: 0.5rem;
+  font-family: 'Noto Serif SC', serif;
+  font-weight: 600;
+  font-size: 1.15rem;
+}
+
+.feature-card p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/* ==================== 通用页面容器 ==================== */
+.chat-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.page-header {
+  background: var(--deep-jade);
+  color: white;
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.page-header button {
+  background: rgba(255,255,255,0.15);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.25);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.page-header button:hover {
+  background: rgba(255,255,255,0.25);
+}
+
+.page-header h2 {
+  font-family: 'Noto Serif SC', serif;
+  font-weight: 500;
+  letter-spacing: 2px;
+}
+
+.page-content {
+  flex: 1;
+  max-width: 800px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+/* ==================== 功能页面通用样式 ==================== */
+.intro-section {
+  text-align: center;
+  color: var(--text-secondary);
+  margin-bottom: 1.5rem;
+  padding: 1.5rem;
+  background: var(--card-white);
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+}
+
+.intro-section p:first-child {
+  font-size: 1.1rem;
+  color: var(--deep-jade);
+  font-style: italic;
+  font-family: 'Noto Serif SC', serif;
+  margin-bottom: 0.5rem;
+}
+
+/* ==================== 表单样式 ==================== */
+.poetry-form textarea,
+.essay-form textarea,
+.couplet-form input,
+.chat-form input {
+  width: 100%;
+  padding: 1rem;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  font-size: 1rem;
+  font-family: inherit;
+  resize: vertical;
+  margin-bottom: 1rem;
+  background: var(--pale-jade);
+  color: var(--text-primary);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.poetry-form textarea::placeholder,
+.essay-form textarea::placeholder,
+.couplet-form input::placeholder,
+.chat-form input::placeholder {
+  color: var(--text-muted);
+}
+
+.poetry-form textarea:focus,
+.essay-form textarea:focus,
+.couplet-form input:focus,
+.chat-form input:focus {
+  outline: none;
+  border-color: var(--deep-jade);
+  box-shadow: 0 0 0 3px rgba(90, 124, 110, 0.12);
+  background: var(--card-white);
+}
+
+.poetry-form textarea {
+  min-height: 150px;
+}
+
+.form-btn {
+  padding: 0.9rem 2rem;
+  background: linear-gradient(135deg, var(--deep-jade) 0%, var(--soft-jade) 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  letter-spacing: 1px;
+}
+
+.form-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(44, 74, 63, 0.25);
+}
+
+.form-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error-message {
+  color: #b85c5c;
+  padding: 0.75rem 1rem;
+  background: #fdf2f2;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+}
+
+/* ==================== 结果展示 ==================== */
+.result-section {
+  background: var(--card-white);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+  margin-top: 1.5rem;
+}
+
+.result-section h3 {
+  color: var(--deep-jade);
+  margin-bottom: 1rem;
+  font-family: 'Noto Serif SC', serif;
+  font-size: 1.1rem;
+}
+
+.result-content {
+  line-height: 1.8;
+  white-space: pre-wrap;
+  color: var(--text-secondary);
+}
+
+/* ==================== 对对联页面 ==================== */
+.couplet-form {
+  background: var(--card-white);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+  margin-bottom: 1rem;
+}
+
+.type-selector {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.type-selector label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.type-selector input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--deep-jade);
+}
+
+.input-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.input-label {
+  color: var(--deep-jade);
+  font-weight: 500;
+  min-width: 50px;
+  font-family: 'Noto Serif SC', serif;
+}
+
+.couplet-result {
+  background: linear-gradient(135deg, #f8faf9 0%, #f0f4f2 100%);
+  border-color: var(--light-jade);
+}
+
+.couplet-display {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.couplet-user,
+.couplet-ldy {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.couplet-user .label {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.couplet-user .text {
+  font-size: 1.2rem;
+  color: var(--text-primary);
+  font-family: 'Noto Serif SC', serif;
+}
+
+.couplet-ldy .label {
+  color: var(--deep-jade);
+  font-weight: 500;
+  font-family: 'Noto Serif SC', serif;
+}
+
+.couplet-ldy .text {
+  font-size: 1.4rem;
+  color: var(--soft-jade);
+  font-family: 'Noto Serif SC', serif;
+  font-weight: 600;
+}
+
+.history-section {
+  margin-top: 2rem;
+}
+
+.history-section h3 {
+  color: var(--deep-jade);
+  margin-bottom: 1rem;
+  font-family: 'Noto Serif SC', serif;
+}
+
+.history-item {
+  background: var(--pale-jade);
+  padding: 1rem;
+  border-radius: 10px;
+  margin-bottom: 0.75rem;
+}
+
+.history-pair {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+  font-family: 'Noto Serif SC', serif;
+}
+
+.history-pair .label {
+  color: var(--text-muted);
+}
+
+/* ==================== 作文点评页面 ==================== */
+.file-upload-section {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.file-upload-btn {
+  display: inline-block;
+  padding: 0.9rem 1.5rem;
+  background: var(--pale-jade);
+  border: 2px dashed var(--border-light);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--text-secondary);
+  font-family: inherit;
+}
+
+.file-upload-btn:hover {
+  border-color: var(--soft-jade);
+  background: var(--card-white);
+  color: var(--deep-jade);
+}
+
+.clear-file {
+  padding: 0.5rem 1rem;
+  background: var(--text-muted);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.2s;
+}
+
+.clear-file:hover {
+  background: var(--text-secondary);
+}
+
+.divider {
+  text-align: center;
+  position: relative;
+  margin: 1.25rem 0;
+  color: var(--text-muted);
+}
+
+.divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--border-light);
+}
+
+.divider span {
+  background: var(--card-white);
+  padding: 0 1rem;
+  position: relative;
+  font-size: 0.9rem;
+}
+
+.essay-result {
+  background: linear-gradient(135deg, #f6faf7 0%, #ecf4f1 100%);
+  border-color: var(--light-jade);
+}
+
+.file-hint {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+}
+
+/* ==================== 飞花令页面 ==================== */
+.flyflower-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.flyflower-main {
+  flex: 1;
+  max-width: 800px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.start-section {
+  text-align: center;
+}
+
+.instruction {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  margin-bottom: 1.5rem;
+}
+
+.keyword-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.keyword-btn {
+  width: 52px;
+  height: 52px;
+  font-size: 1.2rem;
+  background: var(--card-white);
+  color: var(--deep-jade);
+  border: 2px solid var(--border-light);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-family: 'Noto Serif SC', serif;
+}
+
+.keyword-btn:hover:not(:disabled) {
+  background: var(--deep-jade);
+  color: white;
+  border-color: var(--deep-jade);
+  transform: scale(1.08);
+}
+
+.keyword-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.difficulty-select {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.difficulty-select select {
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background: var(--card-white);
+  color: var(--text-primary);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.difficulty-select select:focus {
+  outline: none;
+  border-color: var(--soft-jade);
+}
+
+.game-section {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.keyword-display {
+  text-align: center;
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.keyword-display strong {
+  color: var(--deep-jade);
+  font-family: 'Noto Serif SC', serif;
+}
+
+.position-hint {
+  text-align: center;
+  color: var(--soft-jade);
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+}
+
+.poem-display {
+  background: var(--card-white);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+  margin-bottom: 1rem;
+}
+
+.ai-poem {
+  text-align: center;
+}
+
+.ai-poem .label {
+  color: var(--deep-jade);
+  font-weight: 500;
+  font-family: 'Noto Serif SC', serif;
+}
+
+.ai-poem p {
+  font-size: 1.3rem;
+  line-height: 1.8;
+  margin-top: 0.5rem;
+  color: var(--text-primary);
+  font-family: 'Noto Serif SC', serif;
+}
+
+.game-message {
+  text-align: center;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-bottom: 1rem;
+  font-family: 'Noto Serif SC', serif;
+}
+
+.input-section {
+  background: var(--card-white);
+  padding: 1.25rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+}
+
+.input-section input {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+  background: var(--pale-jade);
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input-section input:focus {
+  outline: none;
+  border-color: var(--deep-jade);
+  box-shadow: 0 0 0 3px rgba(90, 124, 110, 0.12);
+  background: var(--card-white);
+}
+
+.btn-group {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.btn-group button {
+  flex: 1;
+  padding: 0.9rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.3s;
+}
+
+.btn-group button:first-child {
+  background: linear-gradient(135deg, var(--deep-jade) 0%, var(--soft-jade) 100%);
+  color: white;
+}
+
+.btn-group button:first-child:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(44, 74, 63, 0.2);
+}
+
+.btn-group .give-up {
+  background: var(--text-muted);
+  color: white;
+}
+
+.btn-group .give-up:hover:not(:disabled) {
+  background: var(--text-secondary);
+}
+
+.btn-group button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.game-over {
+  text-align: center;
+  background: var(--card-white);
+  padding: 2rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+}
+
+.game-over p {
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.game-over button {
+  margin-top: 1.25rem;
+  padding: 0.9rem 2rem;
+  background: linear-gradient(135deg, var(--deep-jade) 0%, var(--soft-jade) 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 1rem;
+  transition: all 0.3s;
+}
+
+.game-over button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(44, 74, 63, 0.25);
+}
+
+.stats {
+  margin-top: 1.25rem;
+  padding: 1rem;
+  background: var(--pale-jade);
+  border-radius: 10px;
+  text-align: left;
+}
+
+.stats p {
+  margin-bottom: 0.25rem;
+}
+
+/* 难度选择卡片 */
+.difficulty-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  max-width: 700px;
+  margin: 0 auto 1.5rem;
+}
+
+.difficulty-card {
+  background: var(--card-white);
+  padding: 1.5rem 1rem;
+  border-radius: 12px;
+  border: 2px solid var(--border-light);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: center;
+}
+
+.difficulty-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px var(--shadow-medium);
+}
+
+.difficulty-card.easy:hover {
+  border-color: #7cb69e;
+}
+
+.difficulty-card.normal:hover {
+  border-color: var(--soft-jade);
+}
+
+.difficulty-card.hard:hover {
+  border-color: var(--deep-jade);
+}
+
+.difficulty-card h3 {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 1.3rem;
+  color: var(--deep-jade);
+  margin-bottom: 0.5rem;
+}
+
+.difficulty-card p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+}
+
+.difficulty-card .keyword-count {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  background: var(--pale-jade);
+  border-radius: 20px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.difficulty-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  background: var(--pale-jade);
+  border-radius: 20px;
+  margin-bottom: 1.25rem;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.change-difficulty {
+  padding: 0.25rem 0.75rem !important;
+  background: var(--light-jade) !important;
+  color: var(--deep-jade) !important;
+  font-size: 0.8rem !important;
+  border: none !important;
+  border-radius: 6px !important;
+}
+
+.game-over-btns {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1.25rem;
+}
+
+.game-over-btns button {
+  margin-top: 0 !important;
+  flex: 1;
+  max-width: 150px;
+}
+
+.game-over-btns button:last-child {
+  background: var(--light-jade) !important;
+  color: var(--deep-jade) !important;
+}
+
+/* ==================== 聊天页面 ==================== */
+.chat-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  max-width: 800px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+}
+
+.welcome-message {
+  text-align: center;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 3rem 1rem;
+  font-family: 'Noto Serif SC', serif;
+  font-size: 1.05rem;
+}
+
+.message {
+  margin-bottom: 1rem;
+  max-width: 78%;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message.user {
+  margin-left: auto;
+}
+
+.message.assistant {
+  margin-right: auto;
+}
+
+.message .content {
+  padding: 1rem 1.25rem;
+  border-radius: 16px;
+  line-height: 1.7;
+  font-size: 0.95rem;
+}
+
+.message.user .content {
+  background: linear-gradient(135deg, var(--deep-jade) 0%, var(--soft-jade) 100%);
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.message.assistant .content {
+  background: var(--card-white);
+  border: 1px solid var(--border-light);
+  border-bottom-left-radius: 4px;
+}
+
+.message .empathy {
+  font-size: 0.9rem;
+  color: var(--soft-jade);
+  margin-bottom: 0.35rem;
+  font-style: italic;
+  font-family: 'Noto Serif SC', serif;
+}
+
+.input-area {
+  flex-shrink: 0;
+  display: flex;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  background: var(--card-white);
+  border-top: 1px solid var(--border-light);
+}
+
+.input-area input {
+  flex: 1;
+  padding: 0.9rem 1.25rem;
+  border: 1px solid var(--border-light);
+  border-radius: 24px;
+  font-size: 1rem;
+  background: var(--pale-jade);
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input-area input:focus {
+  outline: none;
+  border-color: var(--soft-jade);
+  box-shadow: 0 0 0 3px rgba(90, 124, 110, 0.1);
+  background: var(--card-white);
+}
+
+.input-area button {
+  padding: 0.9rem 1.75rem;
+  background: linear-gradient(135deg, var(--deep-jade) 0%, var(--soft-jade) 100%);
+  color: white;
+  border: none;
+  border-radius: 24px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 1rem;
+  transition: all 0.3s;
+}
+
+.input-area button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(44, 74, 63, 0.25);
+}
+
+.input-area button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.loading {
+  opacity: 0.7;
+}
+
+/* ==================== 响应式适配 ==================== */
+@media (max-width: 768px) {
+  .main-title {
+    font-size: 1.6rem;
+  }
+  
+  .feature-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  
+  .feature-card {
+    padding: 1.25rem 1rem;
+  }
+  
+  .login-card {
+    padding: 2rem 1.5rem;
+  }
+  
+  .message {
+    max-width: 88%;
+  }
+  
+  .page-content {
+    padding: 1rem;
+  }
+  
+  .input-area {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .feature-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .main-content {
+    padding: 1.5rem 1rem;
+  }
+  
+  .keyword-btn {
+    width: 46px;
+    height: 46px;
+    font-size: 1.1rem;
+  }
+  
+  .difficulty-cards {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  .difficulty-card {
+    padding: 1.25rem;
+  }
+}
