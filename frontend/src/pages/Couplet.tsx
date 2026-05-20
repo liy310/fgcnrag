@@ -11,13 +11,16 @@ export default function Couplet() {
   const [history, setHistory] = useState<Array<{user: string, ldy: string}>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [remind, setRemind] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('handleSubmit called, input:', input);
     if (!input.trim()) return;
 
     setLoading(true);
     setError('');
+    setRemind('');
 
     try {
       const res = await fetch('/ldy/poetry/couplet', {
@@ -34,9 +37,16 @@ export default function Couplet() {
 
       if (!res.ok) throw new Error('对对联失败');
       const data = await res.json();
-      setResult(data.matched_line);
-      setHistory([...history, { user: input, ldy: data.matched_line }]);
-      setInput('');
+
+      if (!data.success) {
+        // 校验失败或词穷：显示黛玉的提醒/致歉语
+        setRemind(data.message);
+      } else {
+        // 成功对出
+        setResult(data.matched_line);
+        setHistory([...history, { user: input, ldy: data.message }]);
+        setInput('');
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -96,6 +106,17 @@ export default function Couplet() {
         </form>
 
         {error && <div className="error-message">{error}</div>}
+
+        {remind && (
+          <div className="result-section couplet-result remind">
+            <div className="couplet-display">
+              <div className="couplet-ldy">
+                <span className="label">颦儿：</span>
+                <span className="text">{remind}</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {result && (
           <div className="result-section couplet-result">

@@ -38,6 +38,7 @@ export default function LDYHome() {
   const [featureLoading, setFeatureLoading] = useState(false);
   const [featureError, setFeatureError] = useState('');
   const [coupletType, setCoupletType] = useState<'上联' | '下联'>('上联');
+  const [coupletRemind, setCoupletRemind] = useState('');
   const [essayFileName, setEssayFileName] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -65,6 +66,7 @@ export default function LDYHome() {
     setFeatureInput('');
     setFeatureResult('');
     setFeatureError('');
+    setCoupletRemind('');
     setEssayFileName('');
     // Reset flyflower
     setFfKeyword('');
@@ -115,6 +117,7 @@ export default function LDYHome() {
     if (!featureInput.trim() || !token) return;
     setFeatureLoading(true);
     setFeatureError('');
+    setCoupletRemind('');
     try {
       const res = await fetch('/ldy/poetry/couplet', {
         method: 'POST',
@@ -126,7 +129,13 @@ export default function LDYHome() {
       });
       if (!res.ok) throw new Error('对对联失败');
       const data = await res.json();
-      setFeatureResult(data.matched_line);
+      if (!data.success) {
+        // 校验失败或词穷：显示黛玉的提醒/致歉语
+        setCoupletRemind(data.message);
+      } else {
+        // 成功对出
+        setFeatureResult(data.matched_line);
+      }
     } catch (err: any) {
       setFeatureError(err.message);
     } finally {
@@ -190,7 +199,7 @@ export default function LDYHome() {
   const KEYWORDS_BY_DIFFICULTY = {
     easy: ['花', '月', '风', '春', '山', '水', '云', '雨', '酒', '雪', '天', '江', '夜', '人'],
     normal: ['柳', '荷', '梅', '兰', '舟', '楼', '烟', '霞', '琴', '书', '君', '客', '梦', '情', '秋'],
-    hard: ['笛', '雁', '帆', '尘', '路', '乡', '故国', '流年', '寒', '暖', '霜', '露']
+    hard: ['笛', '雁', '帆', '尘', '路', '乡', '寒', '暖', '霜', '露']
   };
   const DIFFICULTY_INFO: Record<string, { label: string; desc: string }> = {
     easy: { label: '简单', desc: '常见字，适合初学者' },
@@ -267,6 +276,43 @@ export default function LDYHome() {
     }
   };
 
+  const giveUpFlyFlower = async () => {
+    if (!token) return;
+    setFeatureLoading(true);
+    try {
+      const res = await fetch('/ldy/poetry/flyflower', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          keyword: ffKeyword,
+          user_line: ffUserLine || '',
+          user_position: ffUserPosition,
+          current_round: ffCurrentRound,
+          difficulty: ffDifficulty,
+          fail_count: ffUserFailCount,
+          is_give_up: true
+        })
+      });
+      const data = await res.json();
+      setFfAiLine(data.ai_line);
+      setFfMessage(data.message);
+      setFfUserPosition(data.user_position);
+      setFfCurrentRound(data.current_round);
+      setFfTotalRounds(data.total_rounds);
+      setFfUserFailCount(data.user_fail_count);
+      setFfIsUserWin(data.is_user_win);
+      setFfGameOver(true);
+      setFfStats(data.stats);
+    } catch {
+      alert('操作失败');
+    } finally {
+      setFeatureLoading(false);
+    }
+  };
+
   const renderFeatureContent = () => {
     if (!activeFeature) {
       return (
@@ -299,6 +345,11 @@ export default function LDYHome() {
               </button>
             </form>
             {featureError && <div className="error-msg">{featureError}</div>}
+            {coupletRemind && (
+              <div className="result-box remind">
+                <div><span className="label">颦儿：</span>{coupletRemind}</div>
+              </div>
+            )}
             {featureResult && (
               <div className="result-box">
                 <div><span className="label">小友：</span>{featureInput}</div>
@@ -340,16 +391,20 @@ export default function LDYHome() {
               )
             ) : (
               <div className="ff-game">
-                <div className="ff-info">关键字：<strong>{ffKeyword}</strong> | 第{ffCurrentRound}轮</div>
+                <div className="ff-info">关键字：<strong>{ffKeyword}</strong></div>
                 <div className="ff-ai-line">
                   <span className="label">颦儿：</span>{ffAiLine || '...'}
                 </div>
                 {ffMessage && <div className="ff-msg">{ffMessage}</div>}
                 {ffGameOver ? (
                   <div className="ff-over">
-                    <p>{ffIsUserWin ? '恭喜！你战胜了颦儿！' : '颦儿获胜，再接再厉！'}</p>
-                    <p>本局共对了 <strong>{ffTotalRounds}</strong> 轮</p>
-                    <button onClick={() => { setFfGameStarted(false); setFfGameOver(false); }}>再玩一局</button>
+                    <p className="ff-result-title">{ffIsUserWin ? '恭喜！你战胜了颦儿！' : '颦儿获胜，再接再厉！'}</p>
+                    {ffStats && (
+                      <div className="ff-total-stats">
+                        <p>累计统计：共玩了 <strong>{ffStats.total_games || 0}</strong> 次，赢了 <strong>{ffStats.success_games || 0}</strong> 次</p>
+                      </div>
+                    )}
+                    <button className="ff-restart-btn" onClick={() => { setFfGameStarted(false); setFfGameOver(false); }}>再玩一局</button>
                   </div>
                 ) : (
                   <div className="ff-input">
@@ -362,7 +417,7 @@ export default function LDYHome() {
                     />
                     <div className="ff-btns">
                       <button onClick={submitFlyFlower} disabled={featureLoading}>提交</button>
-                      <button className="give-up" onClick={() => setFfGameOver(true)}>结束</button>
+                      <button className="give-up" onClick={giveUpFlyFlower}>结束</button>
                     </div>
                   </div>
                 )}
@@ -403,6 +458,7 @@ export default function LDYHome() {
           <div className="feature-panel">
             <h3><img src="/picture/作文点评图标.png" alt="" className="feature-title-icon" /> 作文点评</h3>
             <p className="feature-desc">「小友若有文章，颦儿愿为批阅。」</p>
+            <p className="file-hint">支持上传 .txt, .docx, .pdf 格式文件（最大5MB）</p>
             <form onSubmit={handleEssaySubmit} className="feature-form">
               <label className="file-upload">
                 <input ref={fileInputRef} type="file" accept=".txt,.docx,.pdf" style={{ display: 'none' }}

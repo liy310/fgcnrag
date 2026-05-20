@@ -42,12 +42,12 @@ class MilvusDatabase:
 
     def __init__(self):
         """初始化数据库连接参数"""
-        self.host = settings.MILVUS_HOST
-        self.port = settings.MILVUS_PORT
-        self.db_name = settings.MILVUS_DB
-        self.client: Optional[MilvusClient] = None
-        self.connected = False
-        self.bm25_function = None
+        self.host = settings.MILVUS_HOST # Milvus服务器地址
+        self.port = settings.MILVUS_PORT# 端口，默认通常为 19530
+        self.db_name = settings.MILVUS_DB# 数据库名称
+        self.client: Optional[MilvusClient] = None# 类型注解：可能是MilvusClient或None
+        self.connected = False# 连接状态标志
+        self.bm25_function = None # 用于BM25稀疏向量检索的函数
 
     def connect(self, max_retries: int = 3) -> bool:
         """
@@ -86,10 +86,14 @@ class MilvusDatabase:
             if not self.client:
                 raise ValueError("客户端未初始化")
             return self.client.has_collection(collection_name=self.COLLECTION_NAME)
+        # - True: 集合存在
+        # - False: 集合不存在（不会抛出异常）
         except Exception as e:
             logger.error(f"检查表是否存在失败: {e}")
             return False
 
+    # 潜在问题：可能掩盖真实错误
+    # 例如：网络断开、权限错误等也返回False
     def _create_indexes(self, collection_name: str):
         """
         创建向量索引
@@ -107,18 +111,18 @@ class MilvusDatabase:
             
             # dense_vector 索引 - 使用IVF_FLAT
             index_params.add_index(
-                field_name="dense_vector",
-                index_type="IVF_FLAT",
+                field_name="dense_vector",# 语义向量字段
+                index_type="IVF_FLAT",# 聚类索引
                 metric_type="IP",  # 内积相似度
-                params={"nlist": 128}
+                params={"nlist": 128}#nlist参数：聚类中心数量
             )
             
             # sparse_vector 索引 - 使用SPARSE_INVERTED_INDEX
             index_params.add_index(
-                field_name="sparse_vector",
-                index_type="SPARSE_INVERTED_INDEX",
-                metric_type="IP",
-                params={}
+                field_name="sparse_vector",# 稀疏向量字段（通常用BM25生成）
+                index_type="SPARSE_INVERTED_INDEX",# 倒排索引
+                metric_type="IP",# 内积
+                params={}# 使用默认参数
             )
             
             # 创建索引
@@ -200,7 +204,7 @@ class MilvusDatabase:
             if not self.client:
                 raise ValueError("客户端未初始化")
             stats = self.client.get_collection_stats(collection_name=self.COLLECTION_NAME)
-            return stats['row_count']
+            return stats['row_count']#向量库里这张表（Collection）里一共有多少条数据（行数）
         except Exception as e:
             logger.error(f"获取实体数量失败: {e}")
             return 0
@@ -508,7 +512,7 @@ def init_database() -> Optional[MilvusDatabase]:
         return None
     db.create_collection()
     db.load_collection()
-    count = db.get_entity_count()
+    count = db.get_entity_count()#查询数据库里有多少条数据（实体数量）
     logger.info(f"当前数据库中有 {count} 条记录")
     return db
 

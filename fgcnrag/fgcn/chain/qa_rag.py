@@ -109,15 +109,15 @@ class QARetrievalChain:
             str: LLM生成的答案
         """
         headers ={
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
+            "Authorization": f"Bearer {self.api_key}",# 身份验证：用你的API密钥登录
+            "Content-Type": "application/json"# 数据格式：发送JSON格式数据
         }
 
         data = {
             "model": self.model,
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": [{"role": "user", "content": prompt}],# 对话内容：用户提问
             "temperature": 0.1,  # 低温度，答案更确定性
-            "max_tokens": 1000
+            "max_tokens": 1000# 最大生成字数，限制回答长度
         }
 
         try:

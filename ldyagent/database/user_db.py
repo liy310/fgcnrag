@@ -2,11 +2,39 @@
 用户数据库模块
 ==============
 
-提供用户认证相关的数据库操作：
+本模块提供用户认证相关的数据库操作：
 - 用户表的创建和初始化
 - 用户CRUD操作
 
-使用PyMySql直接操作MySQL数据库
+数据库表结构（users表）：
+┌─────────────────────────────────────────────────────────────────┐
+│                         users 表                                 │
+├─────────────────────────────────────────────────────────────────┤
+│  字段名           │  类型          │  说明                        │
+├─────────────────────────────────────────────────────────────────┤
+│  id              │  INT          │  主键，自增                   │
+│  username        │  VARCHAR(255) │  用户名，唯一                 │
+│  email           │  VARCHAR(255) │  邮箱，唯一                   │
+│  hashed_password │  VARCHAR(255) │  bcrypt哈希后的密码          │
+│  is_active       │  TINYINT(1)  │  是否激活                     │
+│  is_superuser    │  TINYINT(1)  │  是否超级用户                  │
+│  created_at      │  TIMESTAMP    │  创建时间                     │
+└─────────────────────────────────────────────────────────────────┘
+
+使用示例：
+```python
+from ldyagent.database.user_db import create_user, get_user_by_username
+
+# 创建用户
+user = create_user(
+    username="test",
+    email="test@example.com",
+    hashed_password=get_password_hash("password")
+)
+
+# 查询用户
+user = get_user_by_username("test")
+```
 """
 import os
 import pymysql
@@ -47,25 +75,19 @@ def init_db():
     2. 创建数据库（如果不存在）
     3. 创建用户表
     """
-    # 先连接MySQL服务器（不指定数据库，用于创建数据库）
-    init_config = DB_CONFIG.copy()
-    init_config.pop('database')
-    conn = pymysql.connect(**init_config)
-    cursor = conn.cursor()
-    
-    # 创建数据库（如果不存在）
-    cursor.execute(f"CREATE DATABASE IF NOT EXISTS {DB_CONFIG['database']} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
+    init_config = DB_CONFIG.copy()#复制一份数据库配置
+    init_config.pop('database')#删除配置中的 "database" 键（也就是不指定具体数据库）
+    conn = pymysql.connect(**init_config)#连接MySQL服务器（只连服务器，不连具体库）
+    cursor = conn.cursor()#创建游标，用于执行SQL语句，cursor：游标（相当于通道里的指令执行者、数据搬运工）
+
+    # 创建数据库
+    cursor.execute(
+        f"CREATE DATABASE IF NOT EXISTS {DB_CONFIG['database']} "
+        "CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+    )
     cursor.execute(f"USE {DB_CONFIG['database']}")
-    
+
     # 创建用户表
-    # 字段说明：
-    # - id: 主键，自增
-    # - username: 用户名，唯一
-    # - email: 邮箱，唯一
-    # - hashed_password: 哈希后的密码
-    # - is_active: 是否激活
-    # - is_superuser: 是否超级用户
-    # - created_at: 创建时间
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -77,7 +99,7 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
-    
+
     conn.commit()
     conn.close()
 
@@ -124,9 +146,9 @@ def get_user_by_username(username: str) -> dict | None:
     """
     ensure_db_initialized()
     conn = get_db_connection()
-    cursor = conn.cursor(pymysql.cursors.DictCursor)
+    cursor = conn.cursor(pymysql.cursors.DictCursor)#字典游标（加 DictCursor）， 普通游标（默认）元组
     cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
-    row = cursor.fetchone()
+    row = cursor.fetchone()#fetchone()：取1 条，fetchmany(n)：取n 条，fetchall()：取全部
     conn.close()
     return row
 
@@ -169,15 +191,15 @@ def get_user_by_id(user_id: int) -> dict | None:
     return row
 
 
-# 数据库初始化标志（用于延迟初始化）
+# 数据库初始化标志
 _db_initialized = False
+
 
 def ensure_db_initialized():
     """
     确保数据库已初始化（延迟初始化）
 
     只有在第一次调用时才执行初始化
-    数据库连接失败时只打印警告，不影响应用启动
     """
     global _db_initialized
     if not _db_initialized:
@@ -186,4 +208,3 @@ def ensure_db_initialized():
             _db_initialized = True
         except Exception as e:
             print(f"数据库初始化警告: {e}")
-            # 不抛出异常，让应用在数据库不可用时也能启动

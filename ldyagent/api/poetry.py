@@ -1,72 +1,137 @@
 """
-诗词鉴赏接口
+诗词鉴赏接口模块
+=================
+
+本模块提供诗词相关的API接口：
+- 诗词鉴赏（POST /ldy/poetry/appreciate）
+- 飞花令开始（POST /ldy/poetry/flyflower/start）
+- 飞花令对诗（POST /ldy/poetry/flyflower）
+- 飞花令统计（POST /ldy/poetry/flyflower/stats）
+- 对对联（POST /ldy/poetry/couplet）
+
+飞花令游戏规则：
+┌─────────────────────────────────────────────────────────────────┐
+│                       飞花令游戏规则                              │
+├─────────────────────────────────────────────────────────────────┤
+│  1. 选择关键字（如"花"、"月"、"风"等）                            │
+│  2. 双方轮流说出含有关键字的七言诗句                              │
+│  3. 关键字位置依次轮换（第1字→第2字→...→第7字→第1字）           │
+│  4. 每轮说出7字诗句即完成一回合                                   │
+│  5. 三次机会用完或认输则游戏结束                                  │
+└─────────────────────────────────────────────────────────────────┘
+
+示例：
+关键字"花"，第1字位置：
+- 用户：花谢花飞花满天...（花在第1字）
+- 颦儿：年年柳色...（花在第5字）
+- 用户：...花落知多少（花在第7字）
 """
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from ldyagent.chain.ldy_rag import ldy_chain
 from ldyagent.database.mysql_init import get_mysql_db
 from ldyagent.api.auth import get_current_user, UserResponse
+from ldyagent.services.couplet_service import couplet_service
+from ldyagent.services.flying_flower_service import (
+    start_game as ff_start_game,
+    process_turn as ff_process_turn,
+    DIFFICULTY_KEYWORDS,
+)
 
+# 创建诗词鉴赏路由
 router = APIRouter(prefix="/ldy/poetry", tags=["诗词鉴赏"])
 
-# 难度关键字池
-DIFFICULTY_KEYWORDS = {
-    "easy": ["花", "月", "风", "春", "山", "水", "云", "雨", "天", "江", "夜", "人", "酒", "雪"],
-    "normal": ["柳", "荷", "梅", "兰", "舟", "楼", "烟", "霞", "琴", "书", "君", "客", "梦", "情", "秋"],
-    "hard": ["笛", "雁", "帆", "尘", "路", "乡", "故国", "流年", "寒", "暖", "霜", "露"]
-}
 
+# ============ 请求/响应模型 ============
 
 class PoetryAppreciateRequest(BaseModel):
-    poetry_text: str
+    """诗词鉴赏请求"""
+    poetry_text: str  # 诗词内容
 
 
 class PoetryAppreciateResponse(BaseModel):
-    result: str
+    """诗词鉴赏响应"""
+    result: str  # 鉴赏结果
 
 
 class FlyingFlowerStartRequest(BaseModel):
-    keyword: str
-    difficulty: str = "normal"
+    """飞花令开始请求"""
+    keyword: str            # 关键字（花/月/风/雨等）
+    difficulty: str = "normal"  # 难度（easy/normal/hard）
 
 
 class FlyingFlowerRequest(BaseModel):
-    keyword: str
-    user_line: str
-    user_position: int = 2  # 用户需要对的位置（从2开始，因为AI先对第1字）
-    current_round: int = 1
-    fail_count: int = 0
-    difficulty: str = "normal"
-    is_give_up: bool = False
+    """飞花令对诗请求"""
+    keyword: str           # 关键字
+    user_line: str = ""   # 用户写的诗句
+    user_position: int = 2  # 用户需要对的位置（从2开始，AI先对第1字）
+    current_round: int = 1  # 当前轮次
+    fail_count: int = 0     # 失败次数
+    difficulty: str = "normal"  # 难度
+    is_give_up: bool = False   # 是否认输
+    session_id: str = ""        # 游戏会话ID
 
 
 class FlyingFlowerResponse(BaseModel):
-    ai_line: str
-    ai_position: int      # AI对的字位置（1,2,3...7）
-    user_position: int    # 用户需要对的位置
-    current_round: int
-    is_game_over: bool
-    message: str
-    total_rounds: int
-    stats: dict
-    user_fail_count: int = 0
-    is_user_win: bool = False
-    is_position_valid: bool = True
+    """飞花令响应"""
+    ai_line: str           # AI对的诗句
+    ai_position: int       # AI对的字位置
+    user_position: int     # 用户需要对的位置
+    current_round: int     # 当前轮次
+    is_game_over: bool     # 游戏是否结束
+    message: str           # 提示信息
+    total_rounds: int      # 总轮数
+    stats: dict            # 统计数据
+    user_fail_count: int = 0   # 用户失败次数
+    is_user_win: bool = False  # 用户是否获胜
+    is_position_valid: bool = True  # 位置是否有效
+    session_id: str = ""        # 会话ID
 
 
 class FlyingFlowerStatsResponse(BaseModel):
-    best_rounds: int
-    total_games: int
-    success_games: int
+    """飞花令统计响应"""
+    best_rounds: int  # 历史最高轮数
+    total_games: int  # 总游戏次数
+    success_games: int  # 成功次数
 
+
+class CoupletRequest(BaseModel):
+    """对联请求"""
+    couplet: str               # 用户对联
+    couplet_type: str = "上联"  # 对联类型（上联/下联）
+
+
+class CoupletResponse(BaseModel):
+    """对联响应"""
+    success: bool         # 是否成功对出
+    matched_line: str     # 对出的对联
+    emotion: str          # 黛玉的感慨语
+    message: str          # 完整回复
+    is_reminded: bool = False  # 是否是格式提醒
+
+
+# ============ API接口 ============
 
 @router.post("/appreciate", response_model=PoetryAppreciateResponse)
 async def appreciate_poetry(request: PoetryAppreciateRequest):
-    """诗词鉴赏接口"""
+    """
+    诗词鉴赏接口
+
+    以林黛玉的视角对诗词进行鉴赏，包括：
+    1. 鉴赏意见（颦儿风格的点评）
+    2. 情感分析（诗词的情感基调）
+
+    Args:
+        request: 包含诗词内容
+
+    Returns:
+        PoetryAppreciateResponse: 鉴赏结果
+    """
     try:
         if not request.poetry_text or not request.poetry_text.strip():
             raise HTTPException(status_code=400, detail="诗词内容不能为空")
 
+        # 构建鉴赏Prompt
         prompt = f"""请以林黛玉的视角鉴赏以下诗词，给出鉴赏意见和情感分析。
 
 诗词内容：
@@ -80,6 +145,7 @@ async def appreciate_poetry(request: PoetryAppreciateRequest):
 鉴赏：...
 情感：..."""
 
+        # 调用LLM生成鉴赏
         messages = [
             {"role": "system", "content": "你是林黛玉，颦儿。"},
             {"role": "user", "content": prompt}
@@ -109,8 +175,22 @@ async def appreciate_poetry(request: PoetryAppreciateRequest):
 
 
 @router.post("/flyflower/start", response_model=FlyingFlowerResponse)
-async def flying_flower_start(request: FlyingFlowerStartRequest, current_user: UserResponse = Depends(get_current_user)):
-    """飞花令开始接口 - 黛玉先对第1字，用户对第2字"""
+async def flying_flower_start(
+    request: FlyingFlowerStartRequest,
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """
+    飞花令开始接口
+
+    选择关键字和难度后，黛玉先对出第一句（含关键字在第1字）
+
+    Args:
+        request: 包含关键字和难度
+        current_user: 当前登录用户
+
+    Returns:
+        FlyingFlowerResponse: 游戏开始响应
+    """
     try:
         if not request.keyword or not request.keyword.strip():
             raise HTTPException(status_code=400, detail="关键字不能为空")
@@ -118,45 +198,15 @@ async def flying_flower_start(request: FlyingFlowerStartRequest, current_user: U
         keyword = request.keyword.strip()
         difficulty = request.difficulty if request.difficulty in DIFFICULTY_KEYWORDS else "normal"
 
-        # 生成第一句诗（关键字在位置1）
-        prompt = f"""你是林黛玉，颦儿，与小友行飞花令。
-
-【游戏规则】
-- 关键字：{keyword}
-- 关键字必须在第1字
-- 必须七言诗（7字）
-- 可背前人句，也可即兴创作
-
-请回复一句以"{keyword}"开头的七言诗，后面加一句调侃/鼓励（20字以内）。
-
-格式：
-{keyword}XXXXXX
-颦儿：..."""
-
-        messages = [
-            {"role": "system", "content": "你是林黛玉，颦儿。"},
-            {"role": "user", "content": prompt}
-        ]
-        response = ldy_chain._call_llm(messages, temperature=0.7)
-
-        # 解析返回
-        lines = response.strip().split("\n")
-        ai_line = lines[0] if lines else f"{keyword}近水楼台先得月"
-        message = lines[1].replace("颦儿：", "").strip() if len(lines) > 1 else "小友，该你了。"
-
-        return FlyingFlowerResponse(
-            ai_line=ai_line,
-            ai_position=1,      # 黛玉对了第1字
-            user_position=2,    # 用户需要对第2字
-            current_round=1,
-            is_game_over=False,
-            message=message,
-            total_rounds=0,
-            stats={},
-            user_fail_count=0,
-            is_user_win=False,
-            is_position_valid=True
+        # 调用飞花令服务开始游戏
+        result = ff_start_game(
+            keyword=keyword,
+            difficulty=difficulty,
+            user_id=str(current_user.id),
+            llm_caller=lambda msgs, **kwargs: ldy_chain._call_llm(msgs, **kwargs),
         )
+
+        return FlyingFlowerResponse(**result)
     except HTTPException:
         raise
     except Exception as e:
@@ -164,221 +214,43 @@ async def flying_flower_start(request: FlyingFlowerStartRequest, current_user: U
 
 
 @router.post("/flyflower", response_model=FlyingFlowerResponse)
-async def flying_flower(request: FlyingFlowerRequest, current_user: UserResponse = Depends(get_current_user)):
-    """飞花令接口 - 用户提交后，验证用户输入，然后AI对下一句"""
+async def flying_flower(
+    request: FlyingFlowerRequest,
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """
+    飞花令对诗接口
+
+    用户提交诗句后，系统会：
+    1. 校验格式（7字、关键字位置、中文）
+    2. 去重检查
+    3. 让黛玉对出下一句
+
+    Args:
+        request: 包含用户诗句和游戏状态
+        current_user: 当前登录用户
+
+    Returns:
+        FlyingFlowerResponse: 对诗结果
+    """
     try:
         keyword = request.keyword.strip()
-        difficulty = request.difficulty
         user_id = str(current_user.id)
-
-        # 获取数据库
         db = get_mysql_db()
 
-        # 如果用户结束游戏
-        if request.is_give_up:
-            if db:
-                db.save_flying_flower_record(
-                    user_id=user_id,
-                    keyword=keyword,
-                    difficulty=difficulty,
-                    total_rounds=request.current_round - 1,
-                    is_surrender=True,
-                    is_success=False
-                )
-                stats = db.get_flying_flower_stats(user_id)
-            else:
-                stats = {}
-
-            return FlyingFlowerResponse(
-                ai_line="",
-                ai_position=0,
-                user_position=0,
-                current_round=request.current_round,
-                is_game_over=True,
-                message=f"小友此番对了{request.current_round - 1}轮，来日方长，再战可好？",
-                total_rounds=request.current_round - 1,
-                stats=stats or {},
-                user_fail_count=0,
-                is_user_win=False,
-                is_position_valid=True
-            )
-
-        # ========== 获取参数 ==========
-        user_line = request.user_line.strip()
-        user_position = request.user_position  # 用户需要对的位置
-        current_round = request.current_round
-        user_fail_count = request.fail_count
-
-        # ========== 验证用户输入 ==========
-        is_position_valid = True
-
-        # 验证关键字位置是否正确
-        if len(user_line) >= user_position:
-            char_at_position = user_line[user_position - 1]
-            if char_at_position != keyword:
-                is_position_valid = False
-
-        # 如果位置无效，给用户重试机会
-        if not is_position_valid:
-            new_fail_count = user_fail_count + 1
-            remaining = 3 - new_fail_count
-            
-            if new_fail_count >= 3:
-                # 三次都对不上，判定用户失败
-                if db:
-                    db.save_flying_flower_record(
-                        user_id=user_id,
-                        keyword=keyword,
-                        difficulty=difficulty,
-                        total_rounds=current_round - 1,
-                        is_surrender=True,
-                        is_success=False
-                    )
-                    stats = db.get_flying_flower_stats(user_id)
-                else:
-                    stats = {}
-
-                return FlyingFlowerResponse(
-                    ai_line="",
-                    ai_position=0,
-                    user_position=user_position,
-                    current_round=current_round,
-                    is_game_over=True,
-                    message=f"小友，『{keyword}』应在第{user_position}字。三次机会已用完，此局颦儿胜。",
-                    total_rounds=current_round - 1,
-                    stats=stats or {},
-                    user_fail_count=new_fail_count,
-                    is_user_win=False,
-                    is_position_valid=False
-                )
-            else:
-                # 还有重试机会
-                return FlyingFlowerResponse(
-                    ai_line="",
-                    ai_position=user_position - 1,  # AI上次对的位置
-                    user_position=user_position,    # 保持用户需要对的位置
-                    current_round=current_round,
-                    is_game_over=False,
-                    message=f"小友，『{keyword}』应在第{user_position}字。还剩{remaining}次机会，请重新作答。",
-                    total_rounds=current_round - 1,
-                    stats={},
-                    user_fail_count=new_fail_count,
-                    is_user_win=False,
-                    is_position_valid=False
-                )
-
-        # ========== 位置正确，继续游戏 ==========
-        # 计算AI需要对的下一个位置
-        # 用户对第2字后，AI对第3字
-        # 用户对第3字后，AI对第4字
-        # ...以此类推
-        ai_position = user_position + 1
-
-        # 一轮结束（7字对完后，从头开始）
-        if ai_position > 7:
-            ai_position = 1
-            current_round = current_round + 1
-
-        # 用户下一步需要对的位置
-        user_next_position = ai_position + 1
-        if user_next_position > 7:
-            user_next_position = 1
-
-        # 根据关键字位置调整格式
-        if ai_position == 1:
-            template = f"{keyword}XXXXXX\n颦儿：..."
-        elif ai_position == 2:
-            template = f"X{keyword}XXXXX\n颦儿：..."
-        elif ai_position == 3:
-            template = f"XX{keyword}XXXX\n颦儿：..."
-        elif ai_position == 4:
-            template = f"XXX{keyword}XXX\n颦儿：..."
-        elif ai_position == 5:
-            template = f"XXXX{keyword}XX\n颦儿：..."
-        elif ai_position == 6:
-            template = f"XXXXX{keyword}X\n颦儿：..."
-        else:
-            template = f"XXXXXX{keyword}\n颦儿：..."
-
-        prompt = f"""你是林黛玉，颦儿，与小友行飞花令。
-
-【游戏规则】
-- 关键字：{keyword}
-- 关键字必须在第{ai_position}字
-- 必须七言诗（7字）
-- 可背前人句，也可即兴创作
-- 如果说不出或重复，颦儿认输
-
-【用户所对】（关键字在第{user_position}字）
-{user_line}
-
-【当前轮次】第{current_round}轮，颦儿需要在第{ai_position}字说出关键字
-
-请回复：
-1. 颦儿对的下一句诗（关键字在第{ai_position}字，7字）
-2. 颦儿的一句点评/鼓励/调侃（半文白，20字以内）
-
-格式：
-{template}
-
-（X为其他字，请补全整句诗）"""
-
-        messages = [
-            {"role": "system", "content": "你是林黛玉，颦儿。"},
-            {"role": "user", "content": prompt}
-        ]
-        response = ldy_chain._call_llm(messages, temperature=0.7)
-
-        # 解析返回
-        lines = response.strip().split("\n")
-        ai_line = lines[0] if lines else ""
-        message = lines[1].replace("颦儿：", "").replace("颦儿:", "").strip() if len(lines) > 1 else "小友，该你了。"
-
-        # 检查AI是否也卡壳了（回复包含认输相关词汇）
-        ai_surrender = any(word in response for word in ["认输", "不会", "想不出", "词穷", "颦儿输了"])
-        
-        if ai_surrender or not ai_line or len(ai_line) < 5:
-            # 颦儿认输，用户获胜！
-            if db:
-                db.save_flying_flower_record(
-                    user_id=user_id,
-                    keyword=keyword,
-                    difficulty=difficulty,
-                    total_rounds=current_round,
-                    is_surrender=False,
-                    is_success=True
-                )
-                stats = db.get_flying_flower_stats(user_id)
-            else:
-                stats = {}
-
-            return FlyingFlowerResponse(
-                ai_line="颦儿一时词穷，此番对弈，小友胜了！",
-                ai_position=0,
-                user_position=0,
-                current_round=current_round,
-                is_game_over=True,
-                message=f"颦儿恭贺小友！此番飞花令，小友共对了{current_round}轮，颦儿甘拜下风。",
-                total_rounds=current_round,
-                stats=stats or {},
-                user_fail_count=0,
-                is_user_win=True,
-                is_position_valid=True
-            )
-
-        return FlyingFlowerResponse(
-            ai_line=ai_line,
-            ai_position=ai_position,
-            user_position=user_next_position,
-            current_round=current_round,
-            is_game_over=False,
-            message=message,
-            total_rounds=current_round,
-            stats={},
-            user_fail_count=0,
-            is_user_win=False,
-            is_position_valid=True
+        # 调用飞花令服务处理对诗
+        result = ff_process_turn(
+            keyword=keyword,
+            user_line=request.user_line.strip(),
+            user_position=request.user_position,
+            user_id=user_id,
+            session_id=request.session_id or "",
+            is_give_up=request.is_give_up,
+            db=db,
+            llm_caller=lambda msgs, **kwargs: ldy_chain._call_llm(msgs, **kwargs),
         )
+
+        return FlyingFlowerResponse(**result)
     except HTTPException:
         raise
     except Exception as e:
@@ -387,76 +259,68 @@ async def flying_flower(request: FlyingFlowerRequest, current_user: UserResponse
 
 @router.post("/flyflower/stats", response_model=FlyingFlowerStatsResponse)
 async def flying_flower_stats(current_user: UserResponse = Depends(get_current_user)):
-    """获取飞花令统计数据"""
+    """
+    获取飞花令统计数据
+
+    返回用户的游戏历史统计：
+    - 历史最高轮数
+    - 总游戏次数
+    - 成功完成次数
+
+    Args:
+        current_user: 当前登录用户
+
+    Returns:
+        FlyingFlowerStatsResponse: 统计数据
+    """
     try:
         user_id = str(current_user.id)
         db = get_mysql_db()
+
         if db:
             stats = db.get_flying_flower_stats(user_id)
             return FlyingFlowerStatsResponse(**stats)
+
         return FlyingFlowerStatsResponse(best_rounds=0, total_games=0, success_games=0)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"服务器错误: {str(e)}")
 
 
-class CoupletRequest(BaseModel):
-    couplet: str
-    couplet_type: str = "上联"
-
-
-class CoupletResponse(BaseModel):
-    matched_line: str
-
-
 @router.post("/couplet", response_model=CoupletResponse)
 async def couplet(request: CoupletRequest):
-    """对对联接口"""
+    """
+    对对联接口
+
+    用户给出上联或下联，黛玉对出对应的另一句
+
+    对联规则：
+    - 字数相等
+    - 词性相对
+    - 平仄协调（仄起平收）
+    - 意境相关
+
+    Args:
+        request: 包含对联和类型
+
+    Returns:
+        CoupletResponse: 对联结果
+    """
     try:
         if not request.couplet or not request.couplet.strip():
             raise HTTPException(status_code=400, detail="对联内容不能为空")
 
         couplet_text = request.couplet.strip()
         couplet_type = request.couplet_type if request.couplet_type else "上联"
-        
-        couplet_text = couplet_text.replace("出个下联", "").replace("对个上联", "").replace("帮我对", "").strip()
-        if not couplet_text:
-            raise HTTPException(status_code=400, detail="对联内容不能为空")
 
-        if couplet_type == "下联":
-            prompt = f"""请对出上联：{couplet_text}
-
-要求：
-1. 字数相同
-2. 意境相合
-
-只回复上联，不要其他内容。"""
-            system_msg = "你是林黛玉，颦儿，一位才华横溢的联句高手。颦儿来对小友的下联。"
-        else:
-            prompt = f"""请对出下联：{couplet_text}
-
-要求：
-1. 字数相同
-2. 意境相合
-
-只回复下联，不要其他内容。"""
-            system_msg = "你是林黛玉，颦儿，一位才华横溢的联句高手。颦儿来对小友的上联。"
-
-        messages = [
-            {"role": "system", "content": system_msg},
-            {"role": "user", "content": prompt}
-        ]
-        response = ldy_chain._call_llm(messages, temperature=0.8)
-
-        lines = [line.strip() for line in response.split('\n') if line.strip()]
-        matched_line = lines[0] if lines else ""
-        matched_line = matched_line.strip('""''「」【】')
-
-        if not matched_line or len(matched_line) < 2:
-            matched_line = "颦儿一时词穷，小友见谅"
-
-        return CoupletResponse(
-            matched_line=matched_line
+        # 调用对联服务
+        result = couplet_service(
+            user_couplet=couplet_text,
+            couplet_type=couplet_type,
+            llm_caller=lambda msgs, **kwargs: ldy_chain._call_llm(msgs, **kwargs)
         )
+
+        return CoupletResponse(**result)
+
     except HTTPException:
         raise
     except Exception as e:

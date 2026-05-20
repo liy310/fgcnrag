@@ -53,8 +53,8 @@ class TextChunker:
             chunk_size=self.chunk_size,
             chunk_overlap=self.chunk_overlap,
             separators=self.SEPARATORS,
-            length_function=len,
-            is_separator_regex=False
+            length_function=len,#计算文本块的长度，len 表示使用 Python 内置的 len() 函数，按字符数计算长度
+            is_separator_regex=False#这个参数指定 separators 列表中的元素是否作为正则表达式处理。False（默认值）：分隔符按普通字符串匹配。True：分隔符按正则表达式匹配
         )
 
     def extract_chapters(self, text: str) -> List[Dict[str, Any]]:
@@ -69,25 +69,28 @@ class TextChunker:
         Returns:
             List[Dict]: 章节列表，每项包含title和content
         """
+
+        #章节字典列表，每个字典包含 title（章节标题）和 content（章节内容）
         chapters = []
-        chapter_pattern = '|'.join(self.CHAPTER_PATTERNS)
+        chapter_pattern = '|'.join(self.CHAPTER_PATTERNS)#将章节模式列表用 | 连接成一个大正则表达式
 
         # 查找所有章节标题
         matches = list(re.finditer(chapter_pattern, text))
+        #re.finditer() 返回一个迭代器，包含所有匹配项的位置信息， 每个 match 对象包含： match.group()：匹配到的章节标题文本（如"第一回"）。 match.start()：标题在原文中的起始位置。 match.end()：标题在原文中的结束位置
 
         for i, match in enumerate(matches):
             chapter_title = match.group()
             # 章节内容开始位置
-            start = match.end()
+            start = match.end() # 内容从标题结束后开始
 
             # 确定章节内容结束位置（下一章开始前）
             if i + 1 < len(matches):
-                end = matches[i + 1].start()
+                end = matches[i + 1].start()# 下一章开始的位置
             else:
-                end = len(text)
+                end = len(text) # 最后一章到文本末尾
 
-            chapter_content = text[start:end].strip()
-            if chapter_content:
+            chapter_content = text[start:end].strip()# 截取内容并去除首尾空白
+            if chapter_content:# 只添加非空章节
                 chapters.append({
                     "title": chapter_title,
                     "content": chapter_content
@@ -111,7 +114,7 @@ class TextChunker:
         Returns:
             List[Dict]: 分块结果列表
         """
-        chapters = self.extract_chapters(text)
+        chapters = self.extract_chapters(text)# 返回title（章节标题）和 content（章节内容）
         chunks = []
 
         if not chapters:
@@ -121,15 +124,16 @@ class TextChunker:
                 chunk = {
                     "text": chunk_text,
                     "metadata": {
-                        **(metadata or {}),
-                        "chunk_index": i,
-                        "total_chunks": len(texts)
+                        **(metadata or {}),# 展开元数据（如书名）
+                        "chunk_index": i,# 块编号
+                        "total_chunks": len(texts)# 总块数
                     }
                 }
                 chunks.append(chunk)
         else:
             # 按章节切割
             for chapter_idx, chapter in enumerate(chapters):
+                # 1. 构建章节级元数据
                 chapter_metadata = {
                     **(metadata or {}),
                     "chapter_title": chapter["title"],
@@ -138,13 +142,13 @@ class TextChunker:
 
                 # 对章节内容再进行递归切割
                 chapter_texts = self.splitter.split_text(chapter["content"])
-
+                # 3. 为每个小块添加元数据
                 for chunk_idx, chunk_text in enumerate(chapter_texts):
                     chunk = {
                         "text": chunk_text,
                         "metadata": {
                             **chapter_metadata,
-                            "chunk_index": chunk_idx
+                            "chunk_index": chunk_idx# 章节内块编号
                         }
                     }
                     chunks.append(chunk)

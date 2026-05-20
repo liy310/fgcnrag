@@ -27,7 +27,7 @@ export default function SelectMode() {
               <img src="/picture/四大名著图标.png" alt="四大名著" />
             </div>
             <h2>四大名著知识问答</h2>
-            <p>涵盖《红楼梦》《西游记》《水浒传》《三国演义》，颦儿与你畅游经典</p>
+            <p>涵盖《红楼梦》《西游记》《水浒传》《三国演义》，一起畅游经典</p>
             <div className="card-tags">
               <span>红楼梦</span>
               <span>西游记</span>

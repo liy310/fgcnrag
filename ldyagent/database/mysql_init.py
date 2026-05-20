@@ -2,13 +2,64 @@
 MySQL数据库初始化与操作模块
 ============================
 
-本模块负责林黛玉Agent的MySQL数据库连接和操作，包括：
-- 会话管理（ldy_sessions）
-- 对话历史存储（ldy_conversations）
-- 情绪记录（ldy_emotions）
-- 飞花令游戏记录（ldy_flying_flower_records）
+本模块负责林黛玉Agent的MySQL数据库连接和操作。
 
-使用PyMySql直接操作数据库，不依赖ORM框架。
+数据库表结构：
+┌─────────────────────────────────────────────────────────────────┐
+│                       数据库表概览                                │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌─────────────────────┐  ┌─────────────────────┐              │
+│  │   ldy_sessions     │  │ ldy_conversations  │              │
+│  │     (会话表)       │  │   (对话历史表)     │              │
+│  │                     │◄─│   session_id       │              │
+│  │                     │  │       FK           │              │
+│  └─────────────────────┘  └─────────────────────┘              │
+│                                                                 │
+│  ┌─────────────────────┐  ┌─────────────────────┐              │
+│  │   ldy_emotions     │  │ldy_flying_flower_  │              │
+│  │   (情绪记录表)     │  │    records         │              │
+│  │                     │  │  (飞花令记录表)    │              │
+│  └─────────────────────┘  └─────────────────────┘              │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+
+主要表结构说明：
+1. ldy_sessions - 会话表
+   - 存储用户与林黛玉的每次对话会话
+   - 包含会话ID、用户信息、情绪状态、交互次数、记忆摘要
+
+2. ldy_conversations - 对话历史表
+   - 存储每条对话消息
+   - 包含会话ID、角色、消息内容、情绪标签
+
+3. ldy_emotions - 情绪记录表
+   - 存储情绪分析结果
+   - 包含情绪类型、强度、关键词、LLM回复
+
+4. ldy_flying_flower_records - 飞花令记录表
+   - 存储游戏记录
+   - 包含关键字、难度、轮数、胜负结果
+
+使用示例：
+```python
+from ldyagent.database.mysql_init import init_mysql, get_mysql_db
+
+# 初始化
+db = init_mysql()
+
+# 获取全局实例
+db = get_mysql_db()
+
+# 创建会话
+db.create_session("session123", user_id="user1", user_nickname="小明")
+
+# 保存对话
+db.save_conversation("session123", "user", "你好")
+
+# 获取历史
+history = db.get_conversations("session123", limit=10)
+```
 """
 import sys
 from pathlib import Path
@@ -22,9 +73,14 @@ from ldyagent.config import settings
 
 
 class MySQLDatabase:
-    """MySQL数据库操作类 - 提供会话、对话、情绪、飞花令等数据的CRUD操作"""
+    """
+    MySQL数据库操作类
+
+    提供会话、对话、情绪、飞花令等数据的CRUD操作
+    """
 
     def __init__(self):
+        """初始化数据库连接参数"""
         self.host = settings.DB_HOST
         self.port = settings.DB_PORT
         self.user = settings.DB_USER
@@ -33,7 +89,12 @@ class MySQLDatabase:
         self.connection: Optional[pymysql.Connection] = None
 
     def connect(self) -> bool:
-        """连接数据库"""
+        """
+        连接数据库
+
+        Returns:
+            bool: 连接是否成功
+        """
         try:
             self.connection = pymysql.connect(
                 host=self.host,
@@ -44,7 +105,7 @@ class MySQLDatabase:
                 charset='utf8mb4',
                 cursorclass=pymysql.cursors.DictCursor
             )
-            logger.info(f"成功连接到MySQL: {self.host}:{self.port}, 数据库: {self.database}")
+            logger.info(f"成功连接到MySQL: {self.host}:{self.port}")
             return True
         except Exception as e:
             logger.error(f"连接MySQL失败: {e}")
@@ -86,39 +147,40 @@ class MySQLDatabase:
         """
         初始化所有数据库表
 
-        创建以下四张表：
-        1. ldy_sessions - 会话表：存储用户与林黛玉的每次对话会话
-        2. ldy_conversations - 对话历史表：存储每条对话消息
-        3. ldy_emotions - 情绪记录表：存储情绪分析结果
-        4. ldy_flying_flower_records - 飞花令记录表：存储游戏成绩
+        创建四张表：
+        1. ldy_sessions - 会话表
+        2. ldy_conversations - 对话历史表
+        3. ldy_emotions - 情绪记录表
+        4. ldy_flying_flower_records - 飞花令记录表
         """
-        # ============ 会话表 ldy_sessions ============
-        # 记录用户与林黛玉的每次会话
-        # session_id: 会话唯一标识符（UUID）
-        # user_id: 用户标识
-        # user_nickname: 用户自定义昵称
-        # emotion_state: 当前情绪状态（neutral/positive/negative等）
-        # interaction_count: 交互次数统计
+        # 会话表
         self._execute("""
             CREATE TABLE IF NOT EXISTS `ldy_sessions` (
                 `session_id` VARCHAR(64) PRIMARY KEY COMMENT '会话ID',
                 `user_id` VARCHAR(64) COMMENT '用户标识',
                 `user_nickname` VARCHAR(100) COMMENT '用户称呼',
                 `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-                `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后交互时间',
+                `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
                 `emotion_state` VARCHAR(20) DEFAULT 'neutral' COMMENT '当前情绪状态',
                 `interaction_count` INT DEFAULT 0 COMMENT '交互次数',
                 INDEX idx_user_id (`user_id`),
                 INDEX idx_created_at (`created_at`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='林黛玉Agent会话表'
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='会话表'
         """)
 
-        # ============ 对话历史表 ldy_conversations ============
-        # 存储会话中的每条消息
-        # session_id: 关联的会话ID
-        # role: 角色（user=用户，assistant=林黛玉）
-        # content: 对话内容
-        # emotion_tag: 情绪标签
+        # 兼容升级：增加memory_summary字段
+        existing_cols = self._query(
+            "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'ldy_sessions' AND COLUMN_NAME = 'memory_summary'",
+            (self.database,)
+        )
+        if not existing_cols:
+            self._execute("""
+                ALTER TABLE `ldy_sessions`
+                ADD COLUMN `memory_summary` TEXT COMMENT '压缩记忆摘要'
+                AFTER `interaction_count`
+            """)
+
+        # 对话历史表
         self._execute("""
             CREATE TABLE IF NOT EXISTS `ldy_conversations` (
                 `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
@@ -128,39 +190,26 @@ class MySQLDatabase:
                 `emotion_tag` VARCHAR(50) COMMENT '情绪标签',
                 `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '时间戳',
                 INDEX idx_session_id (`session_id`),
-                INDEX idx_created_at (`created_at`),
                 FOREIGN KEY (`session_id`) REFERENCES `ldy_sessions`(`session_id`) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='林黛玉Agent对话历史表'
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='对话历史表'
         """)
 
-        # ============ 情绪记录表 ldy_emotions ============
-        # 存储情绪分析结果，用于情绪追踪
-        # user_emotion: 识别出的情绪类型
-        # emotion_intensity: 情绪强度（0-1）
-        # ldy_response: 林黛玉的回复
-        # emotion_keywords: 情绪关键词列表
+        # 情绪记录表
         self._execute("""
             CREATE TABLE IF NOT EXISTS `ldy_emotions` (
                 `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
                 `session_id` VARCHAR(64) COMMENT '会话ID',
                 `user_emotion` VARCHAR(50) COMMENT '用户情绪',
-                `emotion_intensity` FLOAT DEFAULT 0.5 COMMENT '情绪强度0-1',
+                `emotion_intensity` FLOAT DEFAULT 0.5 COMMENT '情绪强度',
                 `ldy_response` TEXT COMMENT 'Agent回复',
                 `emotion_keywords` JSON COMMENT '情绪关键词',
                 `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '时间戳',
                 INDEX idx_session_id (`session_id`),
-                INDEX idx_user_emotion (`user_emotion`),
                 FOREIGN KEY (`session_id`) REFERENCES `ldy_sessions`(`session_id`) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='林黛玉Agent情绪记录表'
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='情绪记录表'
         """)
 
-        # ============ 飞花令记录表 ldy_flying_flower_records ============
-        # 存储用户飞花令游戏记录
-        # keyword: 关键字（花/月/风等）
-        # difficulty: 难度等级
-        # total_rounds: 完成的轮数
-        # is_surrender: 是否认输
-        # is_success: 是否成功（击败林黛玉）
+        # 飞花令记录表
         self._execute("""
             CREATE TABLE IF NOT EXISTS `ldy_flying_flower_records` (
                 `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
@@ -171,9 +220,8 @@ class MySQLDatabase:
                 `is_surrender` TINYINT DEFAULT 0 COMMENT '是否主动认输',
                 `is_success` TINYINT DEFAULT 0 COMMENT '是否成功完成',
                 `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '游戏时间',
-                INDEX idx_user_id (`user_id`),
-                INDEX idx_created_at (`created_at`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='飞花令游戏记录表'
+                INDEX idx_user_id (`user_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='飞花令记录表'
         """)
 
         logger.info("所有表初始化完成")
@@ -256,6 +304,26 @@ class MySQLDatabase:
             (session_id, days)
         )
 
+    # ============ 记忆摘要操作 ============
+
+    def get_session_summary(self, session_id: str) -> str:
+        """获取会话的记忆摘要"""
+        result = self._query(
+            "SELECT `memory_summary` FROM `ldy_sessions` WHERE session_id = %s",
+            (session_id,)
+        )
+        if result and result[0].get("memory_summary"):
+            return str(result[0]["memory_summary"])
+        return ""
+
+    def update_session_summary(self, session_id: str, summary: str) -> bool:
+        """更新会话的记忆摘要"""
+        self._execute(
+            "UPDATE `ldy_sessions` SET `memory_summary` = %s WHERE session_id = %s",
+            (summary, session_id)
+        )
+        return True
+
     # ============ 飞花令操作 ============
 
     def save_flying_flower_record(self, user_id: str, keyword: str, difficulty: str,
@@ -270,17 +338,14 @@ class MySQLDatabase:
 
     def get_flying_flower_stats(self, user_id: str) -> Dict:
         """获取飞花令统计数据"""
-        # 历史最高轮数
         max_rounds = self._query(
             "SELECT MAX(total_rounds) as best FROM `ldy_flying_flower_records` WHERE user_id = %s",
             (user_id,)
         )
-        # 总游戏次数
         total_games = self._query(
             "SELECT COUNT(*) as total FROM `ldy_flying_flower_records` WHERE user_id = %s",
             (user_id,)
         )
-        # 成功完成次数
         success_games = self._query(
             "SELECT COUNT(*) as success FROM `ldy_flying_flower_records` WHERE user_id = %s AND is_success = 1",
             (user_id,)

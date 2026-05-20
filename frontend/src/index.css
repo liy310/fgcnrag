@@ -520,6 +520,18 @@ body {
   font-weight: 600;
 }
 
+.couplet-result.remind {
+  background: linear-gradient(135deg, #faf8f5 0%, #f5f0eb 100%);
+  border-color: var(--warm-amber, #c8a97e);
+}
+
+.couplet-result.remind .couplet-ldy .text {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  font-weight: 400;
+  font-style: italic;
+}
+
 .history-section {
   margin-top: 2rem;
 }

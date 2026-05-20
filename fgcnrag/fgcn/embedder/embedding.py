@@ -29,7 +29,7 @@ class EmbeddingModel:
     def __init__(self):
         """初始化嵌入模型配置"""
         self.api_key = settings.BAILIAN_API_KEY
-        self.endpoint = settings.BAILIAN_API_ENDPOINT
+        self.endpoint = settings.BAILIAN_API_ENDPOINT#API 地址
         self.model = "text-embedding-v4"  # 模型名称
         self.dimensions = settings.EMBEDDING_DIM  # 向量维度（1024）
 
@@ -88,7 +88,7 @@ class EmbeddingModel:
                 "input": batch
             }
 
-            try:
+            try:#发送请求到阿里百炼 API
                 response = requests.post(
                     f"{self.endpoint}/embeddings",
                     headers=headers,
@@ -100,6 +100,7 @@ class EmbeddingModel:
                 if response.status_code != 200:
                     print(f"向量化失败: {response.status_code} - {response.text}")
                     all_embeddings.extend([np.zeros(self.dimensions).tolist() for _ in batch])
+                    #当API 调用失败时，给这批每一条文本，都生成一个1024维的全0向量，用来占位，保证程序不崩溃。
                     continue
                 
                 # 解析响应

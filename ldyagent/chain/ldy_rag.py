@@ -1,15 +1,56 @@
 """
-林黛玉Agent RAG问答链
-=====================
+林黛玉Agent RAG问答链核心模块
+==============================
 
-核心业务逻辑模块，负责：
+本模块是林黛玉Agent的核心业务逻辑，负责：
 - 调用DeepSeek LLM生成回复
 - 构建包含角色设定、历史上下文、情绪信息的Prompt
 - 管理会话状态和对话历史
 - 提供对话、情绪疏导、作文点评等功能
 
-RAG（Retrieval-Augmented Generation）即检索增强生成，
-结合了检索系统和LLM生成能力。
+RAG（Retrieval-Augmented Generation）检索增强生成：
+┌─────────────────────────────────────────────────────────────────┐
+│                       RAG工作流程                                │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  用户输入 ──▶ 情绪分析 ──▶ 检索增强 ──▶ LLM生成 ──▶ 回复      │
+│                    │               │                             │
+│                    ▼               ▼                             │
+│              识别情绪状态      会话历史上下文                      │
+│                    │               │                             │
+│                    ▼               ▼                             │
+│              选择共情语        记忆压缩（如需要）                  │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+
+核心类：
+- LinDaiyuChain: RAG问答链类
+
+主要方法：
+- chat(): 对话（包含情绪共情）
+- emotion_support(): 情绪疏导
+- essay_review(): 作文点评
+- _call_llm(): 调用DeepSeek LLM
+- _get_conversation_context(): 获取对话上下文（含记忆压缩）
+
+使用示例：
+```python
+from ldyagent.chain.ldy_rag import ldy_chain, chat_with_lindy
+
+# 方式1：直接调用chain
+result = ldy_chain.chat(
+    user_input="考试没考好，心情很低落",
+    session_id="user123",
+    user_nickname="小明"
+)
+
+# 方式2：通过便捷函数
+result = chat_with_lindy(
+    user_input="考试没考好",
+    empathy="小友莫要太过自责...",
+    emotion_detected="焦虑"
+)
+```
 """
 import sys
 from pathlib import Path
@@ -31,7 +72,7 @@ from ldyagent.database.mysql_init import get_mysql_db
 
 class LinDaiyuChain:
     """
-    林黛玉Agent问答链类
+    林黛玉Agent RAG问答链类
 
     核心功能：
     - chat(): 对话（包含情绪共情）
@@ -40,10 +81,14 @@ class LinDaiyuChain:
     """
 
     def __init__(self):
-        """初始化问答链，配置LLM参数"""
+        """
+        初始化问答链
+
+        从配置加载LLM参数
+        """
         self.api_key = settings.DEEPSEEK_API_KEY
         self.api_base = settings.DEEPSEEK_API_BASE
-        self.model = "deepseek-v4-flash"  # 使用的模型
+        self.model = "deepseek-v4-flash"  # DeepSeek模型
         self.db = None  # 数据库连接（延迟初始化）
 
     def _get_db(self):
@@ -61,9 +106,17 @@ class LinDaiyuChain:
         """
         调用DeepSeek LLM生成回复
 
+        参数说明：
+        - messages: 对话消息列表，格式 [{"role": "user", "content": "..."}]
+        - temperature: 温度参数，控制随机性
+          * 0.0-0.3: 更确定性，适合事实性问答
+          * 0.4-0.7: 平衡模式，适合一般对话
+          * 0.8-1.0: 高随机性，适合创意生成
+        - retries: 重试次数
+
         Args:
-            messages: 消息列表，格式为 [{"role": "user", "content": "..."}]
-            temperature: 温度参数，控制随机性（0-1，越高越随机）
+            messages: 消息列表
+            temperature: 温度参数（0-1）
             retries: 重试次数
 
         Returns:
@@ -90,8 +143,8 @@ class LinDaiyuChain:
                     json=data,
                     timeout=(10, 120)  # (连接超时10秒, 读取超时120秒)
                 )
-                response.raise_for_status()
-                result = response.json()
+                response.raise_for_status()#检查 HTTP 状态码
+                result = response.json()#.json() 方法自动转成 Python 字典（dict）
                 return result["choices"][0]["message"]["content"]
             except requests.exceptions.Timeout:
                 logger.warning(f"LLM调用超时，第 {attempt + 1} 次重试...")
@@ -104,6 +157,70 @@ class LinDaiyuChain:
                 logger.error(f"LLM调用失败: {e}")
                 return "颦儿今日身子有些不适，改日再来请教罢。"
 
+    def _get_conversation_context(self, session_id: str) -> str:
+        """
+        获取对话上下文，必要时对早期历史进行记忆压缩
+
+        记忆压缩策略：
+        1. 从DB取最近20条对话
+        2. 最近3轮（6条）完整保留
+        3. 更早历史标记为"历史"
+        4. 如果总字符超过2000，对历史进行摘要压缩
+        5. 压缩后的摘要存DB，下次增量压缩
+
+        Returns:
+            str: 格式化后的上下文字符串
+        """
+        db = self._get_db()
+        if not db:
+            return ""
+
+        conversations = db.get_conversations(session_id, limit=20)
+        if not conversations:
+            return ""
+
+        # 反转为正序
+        conversations.reverse()
+
+        # 分割：最近3轮完整保留
+        recent = conversations[-6:] if len(conversations) >= 6 else conversations
+        history = conversations[:-6] if len(conversations) > 6 else []
+
+        # 格式化
+        def _fmt(conv_list):
+            parts = []
+            for c in conv_list:
+                role = "用户" if c["role"] == "user" else "颦儿"
+                parts.append(f"{role}：{c['content']}")
+            return "\n".join(parts)
+
+        recent_text = _fmt(recent)
+
+        if not history:
+            return f"【对话历史】\n{recent_text}"
+
+        history_text = _fmt(history)
+
+        # 检查是否需要压缩
+        from ldyagent.services.memory_compressor import should_compress, compress_history
+
+        if not should_compress(len(recent_text), len(history_text)):
+            return f"【对话历史】\n{history_text}\n\n{recent_text}"
+
+        # 需要压缩
+        existing_summary = db.get_session_summary(session_id)
+        summary = compress_history(
+            history_text=history_text,
+            existing_summary=existing_summary,
+            llm_caller=lambda msgs, **kw: self._call_llm(msgs, **kw),
+        )
+
+        if summary:
+            db.update_session_summary(session_id, summary)
+            return f"【长期记忆】\n{summary}\n\n【最近对话】\n{recent_text}"
+
+        return f"【对话历史】\n{history_text}\n\n{recent_text}"
+
     def _build_messages(self, user_input: str, session_id: str, emotion_detected: str = None,
                        context: str = None, empathy: str = None) -> List[Dict[str, str]]:
         """
@@ -112,8 +229,8 @@ class LinDaiyuChain:
         消息构建顺序：
         1. System Prompt（林黛玉角色设定）
         2. 情绪响应指令
-        3. 情绪相关诗词（如果有）
-        4. 预生成共情回复（如果有）
+        3. 情绪相关诗词
+        4. 预生成共情回复
         5. 对话历史上下文
         6. 额外参考信息
         7. 用户输入
@@ -130,10 +247,9 @@ class LinDaiyuChain:
         """
         messages = [{"role": "system", "content": LIN_DAIYU_SYSTEM_PROMPT}]
 
-        # ============ 添加情绪响应指令 ============
-        # 明确要求LLM先识别情绪、先共情再回答
+        # 添加情绪响应指令
         emotion_instruction = """
-【重要：情绪识别与共情要求】
+|【重要：情绪识别与共情要求】
 你必须先识别用户的情绪状态，然后：
 1. 先用共情的语言回应用户（如理解、安慰、认可）
 2. 再展开具体对话内容
@@ -142,39 +258,28 @@ class LinDaiyuChain:
 """
         messages[0]["content"] += emotion_instruction
 
-        # ============ 添加情绪上下文 ============
-        # 如果检测到非中性情绪，添加对应诗词
+        # 添加情绪诗词
         if emotion_detected and emotion_detected != "neutral":
             emotion_poetry = emotion_analyzer.get_poetry_for_emotion(emotion_detected)
             if emotion_poetry:
                 emotion_context = f"\n\n当前用户情绪为'{emotion_detected}'，诗词引用：{emotion_poetry['content']}"
                 messages[0]["content"] += emotion_context
 
-        # ============ 添加预生成共情回复 ============
-        # 在回复开头先说共情语，增加情感支持
+        # 添加预生成共情
         if empathy:
             empathy_context = f"\n\n【必须先说的共情语】\n在回复的开头，必须先引用以下共情语，再展开对话：\n「{empathy}」"
             messages[0]["content"] += empathy_context
 
-        # ============ 添加对话历史 ============
-        # 从数据库获取最近6条对话，保持上下文连贯
-        db = self._get_db()
-        if db:
-            recent_context = db.get_recent_context(session_id, limit=6)
-            if recent_context:
-                messages.append({
-                    "role": "system",
-                    "content": f"【对话历史】\n{recent_context}"
-                })
+        # 添加对话历史
+        conv_context = self._get_conversation_context(session_id)
+        if conv_context:
+            messages.append({"role": "system", "content": conv_context})
 
-        # ============ 添加额外上下文 ============
+        # 添加额外上下文
         if context:
-            messages.append({
-                "role": "system",
-                "content": f"【参考信息】\n{context}"
-            })
+            messages.append({"role": "system", "content": f"【参考信息】\n{context}"})
 
-        # ============ 添加用户输入 ============
+        # 添加用户输入
         messages.append({"role": "user", "content": user_input})
 
         return messages
@@ -187,54 +292,45 @@ class LinDaiyuChain:
         功能流程：
         1. 创建/获取会话
         2. 保存用户消息
-        3. 构建Prompt（包含角色、历史、情绪、共情）
-        4. 调用LLM生成回复
-        5. 保存回复到数据库
+        3. 构建Prompt
+        4. 调用LLM
+        5. 保存回复
         6. 记录情绪数据
 
         Args:
             user_input: 用户输入
-            session_id: 会话ID（为空则创建新会话）
+            session_id: 会话ID
             user_nickname: 用户昵称
             emotion_detected: 检测到的情绪
             context: 额外上下文
-            empathy: 预生成的共情回复
+            empathy: 预生成共情
 
         Returns:
-            Dict: 包含answer（回复）、session_id、emotion_detected
+            Dict: 包含answer, session_id, emotion_detected
         """
-        # 如果没有session_id，生成新的UUID
         if not session_id:
             session_id = str(uuid.uuid4())
 
-        # ============ 会话管理 ============
         db = self._get_db()
-        if db:
-            # 创建或更新会话
+        if db:#如果会话不存在，自动创建新会话
             session = db.get_session(session_id)
             if not session:
                 db.create_session(session_id, user_nickname=user_nickname, user_id=user_nickname)
+            db.save_conversation(session_id, "user", user_input, emotion_detected)# 保存本次用户的对话记录
+            db.increment_interaction(session_id)# 这个会话的交互次数+1
 
-            # 保存用户消息到对话历史
-            db.save_conversation(session_id, "user", user_input, emotion_detected)
-
-            # 增加交互次数统计
-            db.increment_interaction(session_id)
-
-        # ============ 构建消息并调用LLM ============
+        # 构建消息并调用LLM
         messages = self._build_messages(user_input, session_id, emotion_detected, context, empathy)
         response = self._call_llm(messages)
 
-        # ============ 保存回复和情绪数据 ============
+        # 保存回复和情绪
         if db:
-            # 保存LLM回复到对话历史
             db.save_conversation(session_id, "assistant", response, emotion_detected)
-
-            # 如果检测到非中性情绪，更新会话状态并记录情绪
             if emotion_detected and emotion_detected != "neutral":
                 db.update_session(session_id, emotion_state=emotion_detected)
-                keywords = emotion_analyzer.analyze(user_input)[2]
-                db.save_emotion(session_id, emotion_detected, 0.5, response, keywords)
+                # 获取真实的情绪强度，而非固定值
+                _, intensity, keywords = emotion_analyzer.analyze(user_input)
+                db.save_emotion(session_id, emotion_detected, intensity, response, keywords)
 
         return {
             "answer": response,
@@ -246,38 +342,20 @@ class LinDaiyuChain:
         """
         情绪疏导功能
 
-        专门针对用户倾诉进行情绪支持：
-        1. 分析用户情绪
-        2. 生成共情回复
-        3. 提供温和的建议（用诗词典故启发）
-
-        Args:
-            user_input: 用户倾诉内容
-            session_id: 会话ID
-
-        Returns:
-            Dict: 包含共情回复、建议、情绪状态等
+        专门针对用户倾诉进行情绪支持
         """
-        # 分析用户情绪
         emotion, intensity, keywords = emotion_analyzer.analyze(user_input)
-
-        # 生成共情回复
         empathy = emotion_analyzer.generate_empathy_response(emotion, user_input)
 
-        # 构建建议请求
         suggestion_prompt = f"""用户倾诉：{user_input}
-
 用户当前情绪：{emotion}
 情绪强度：{intensity}
-
-请以林黛玉的语气，给出温和的建议。不要直接说教，而是用诗词典故或生活智慧来启发。控制在50字以内。"""
+请以林黛玉的语气，给出温和的建议。"""
 
         messages = [
             {"role": "system", "content": LIN_DAIYU_SYSTEM_PROMPT},
             {"role": "user", "content": suggestion_prompt}
         ]
-
-        # 调用LLM生成建议
         suggestion = self._call_llm(messages, temperature=0.5)
 
         return {
@@ -292,90 +370,47 @@ class LinDaiyuChain:
         """
         作文点评功能
 
-        以林黛玉风格对作文进行点评：
-        - 先含蓄夸赞可取之处
-        - 再温柔吐槽问题（俗套、生硬、空洞等）
-        - 用诗词典故和文人幽默
-        - 用一句诗意傲娇的话收尾
-
-        Args:
-            essay_content: 作文内容
-
-        Returns:
-            Dict: 包含点评结果
+        以林黛玉风格对作文进行点评
         """
-        # 构建点评Prompt
-        review_prompt = f"""你就是林黛玉，自带娇嗔小性子、清冷孤傲，文风半文半白，擅长温柔吐槽、含蓄讽刺，带着文人特有的傲娇与幽默，不刻薄伤人，但句句戳点。
+        review_prompt = f"""你就是林黛玉，自带娇嗔小性子、清冷孤傲，文风半文半白，擅长温柔吐槽、含蓄讽刺。
 
-点评人设与核心要求：
-1. 摒弃所有机械标题、分段、序号、标签，全程连贯自然独白，随性娓娓点评
-2. 口吻贴合黛玉：略带小挑剔、小傲娇、温柔吐槽，有灵气、有小性子幽默，文雅讽刺不生硬
-3. 行文节奏：先含蓄夸赞文章可取之处，不刻意吹捧；再带着娇嗔吐槽文章的俗套、生硬、空洞、堆砌等问题，自带黛玉专属的通透嘲讽感
-4. 自然评析文章的气韵、情感、文风短板，最后用一句诗意、带点小傲娇的话语收尾总结
-5. 统一称呼对方为小友，文笔古韵雅致，无网络口语、无多余符号、无空行，浑然天成
+点评要求：
+1. 全程连贯自然独白，无机械标题分段
+2. 略带小挑剔、小傲娇、温柔吐槽
+3. 先夸可取之处，再吐槽问题
+4. 用一句诗意傲娇的话收尾
+5. 称呼对方为小友
 
 作文内容：
 {essay_content}
 
-请直接输出完整连贯、贴合黛玉小性子幽默讽刺风格的点评文本。"""
+请直接输出完整连贯的点评。"""
+
         messages = [
             {"role": "system", "content": LIN_DAIYU_SYSTEM_PROMPT},
             {"role": "user", "content": review_prompt}
         ]
-
-        # 调用LLM生成点评
         review = self._call_llm(messages, temperature=0.6)
 
-        return {
-            "review": review
-        }
+        return {"review": review}
 
 
 # ============ 全局实例和入口函数 ============
 
-# 创建全局单例实例
 ldy_chain = LinDaiyuChain()
 
 
 def chat_with_lindy(user_input: str, session_id: str = None, user_nickname: str = None,
-                   empathy: str = None) -> Dict[str, any]:
-    """
-    对话入口函数
-
-    Args:
-        user_input: 用户输入
-        session_id: 会话ID
-        user_nickname: 用户昵称
-        empathy: 预生成共情回复
-
-    Returns:
-        Dict: 包含回答和元数据
-    """
-    return ldy_chain.chat(user_input, session_id, user_nickname, empathy=empathy)
+                   empathy: str = None, emotion_detected: str = None) -> Dict[str, any]:
+    """对话入口函数"""
+    return ldy_chain.chat(user_input, session_id, user_nickname, emotion_detected=emotion_detected, empathy=empathy)
 
 
 def emotion_support(user_input: str, session_id: str = None) -> Dict[str, str]:
-    """
-    情绪疏导入口函数
-
-    Args:
-        user_input: 用户倾诉内容
-        session_id: 会话ID
-
-    Returns:
-        Dict: 包含共情回复和建议
-    """
+    """情绪疏导入口函数"""
     return ldy_chain.emotion_support(user_input, session_id)
 
 
 def review_essay(essay_content: str) -> Dict[str, any]:
-    """
-    作文点评入口函数
-
-    Args:
-        essay_content: 作文内容
-
-    Returns:
-        Dict: 包含点评结果
-    """
+    """作文点评入口函数"""
     return ldy_chain.essay_review(essay_content)

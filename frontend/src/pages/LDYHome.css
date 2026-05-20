@@ -297,6 +297,15 @@
   border-left: 4px solid #5a9a8a;
 }
 
+.result-box.remind {
+  background: #fef8f0;
+  border-left-color: #c09060;
+}
+
+.result-box.remind .label {
+  color: #a07040;
+}
+
 .result-box h4 {
   margin: 0 0 0.5rem;
   color: #2c5a4a;
@@ -359,6 +368,10 @@
 
 .keyword-btn {
   padding: 0.5rem;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: rgba(255, 255, 255, 0.9);
   border: 2px solid #d0e0d8;
   border-radius: 8px;
@@ -366,6 +379,7 @@
   font-size: 1rem;
   color: #3a5a4a;
   transition: all 0.3s;
+  white-space: nowrap;
 }
 
 .keyword-btn:hover:not(:disabled) {
@@ -459,6 +473,50 @@
 .ff-over {
   text-align: center;
   padding: 1rem;
+}
+
+.ff-result-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2c5a4a;
+  margin-bottom: 0.8rem;
+}
+
+.ff-restart-btn {
+  margin-top: 1rem;
+  padding: 0.7rem 2.5rem;
+  font-size: 1rem;
+  background: linear-gradient(135deg, #5a9a8a 0%, #4a8a7a 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: 500;
+}
+
+.ff-restart-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(90, 154, 138, 0.4);
+}
+
+.ff-total-stats {
+  margin: 1rem 0;
+  padding: 0.8rem;
+  background: linear-gradient(135deg, #f8faf9 0%, #e8f0ec 100%);
+  border-radius: 10px;
+  border: 1px solid #d0e8e0;
+  font-size: 0.95rem;
+  color: #4a6a5a;
+}
+
+.ff-total-stats p {
+  margin: 0;
+}
+
+.ff-total-stats strong {
+  color: #2c5a4a;
+  font-weight: 600;
 }
 
 /* 文件上传 */

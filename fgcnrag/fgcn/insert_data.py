@@ -69,6 +69,7 @@ def insert_text_chunks(db: MilvusDatabase):
 
     data_path = settings.DATA_PATH
     txt_files = list(data_path.glob("*.txt"))
+    #把指定文件夹里所有 .txt 结尾的文件，全部找出来，放进一个列表里。
 
     if not txt_files:
         logger.warning(f"未找到TXT文件: {data_path}")
