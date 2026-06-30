@@ -37,7 +37,6 @@ logs/
 Thumbs.db
 
 # ============ 数据目录 ============
-ldyagent/data/
 fgcnrag/data/
 
 # ============ 操作系统 ============

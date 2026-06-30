@@ -10,10 +10,6 @@ export default defineConfig({
         target: 'http://localhost:8080',
         changeOrigin: true
       },
-      '/ldy': {
-        target: 'http://localhost:8080',
-        changeOrigin: true
-      },
       '/fgcn': {
         target: 'http://localhost:8080',
         changeOrigin: true

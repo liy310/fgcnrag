@@ -15,7 +15,7 @@
 └─────────────┴──────────────────────────────────────────────────┘
 
 加载器说明：
-- DocumentLoader: 通用文档加载器，根据扩展名自动选择
+- DocumentLoader: 文档加载器，根据扩展名自动选择
 - ExcelLoader: 专门加载Excel格式的问答对数据
 
 LangChain Document格式：

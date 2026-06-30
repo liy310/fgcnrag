@@ -40,7 +40,7 @@ FGCNRAG四大名著知识库系统
 │   ├── embedder/                   # 向量化
 │   │   └── embedding.py            # 阿里百炼embedding
 │   ├── loader/                     # 数据加载
-│   │   ├── document_loader.py      # 通用文档加载
+│   │   ├── document_loader.py      # 四大名著文档加载
 │   │   └── excel_loader.py         # Excel问答对加载
 │   └── retriever/                  # 检索器
 │       └── hybrid_retriever.py     # 混合检索器

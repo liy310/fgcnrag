@@ -4,12 +4,6 @@ import { User, authApi, tokenManager } from './api';
 import Login from './pages/Login';
 import SelectMode from './pages/SelectMode';
 import FourClassicQA from './pages/FourClassicQA';
-import LDYHome from './pages/LDYHome';
-import FlyFlower from './pages/FlyFlower';
-import Chat from './pages/Chat';
-import PoetryAppreciate from './pages/PoetryAppreciate';
-import Couplet from './pages/Couplet';
-import EssayReview from './pages/EssayReview';
 
 interface AuthContextType {
   user: User | null;
@@ -114,40 +108,6 @@ export default function App() {
           <Route path="/four-classic" element={
             <ProtectedRoute>
               <FourClassicQA />
-            </ProtectedRoute>
-          } />
-          
-          {/* 林黛玉首页 */}
-          <Route path="/ldy" element={
-            <ProtectedRoute>
-              <LDYHome />
-            </ProtectedRoute>
-          } />
-          
-          {/* 林黛玉子功能 */}
-          <Route path="/ldy/flyflower" element={
-            <ProtectedRoute>
-              <FlyFlower />
-            </ProtectedRoute>
-          } />
-          <Route path="/ldy/chat" element={
-            <ProtectedRoute>
-              <Chat />
-            </ProtectedRoute>
-          } />
-          <Route path="/ldy/poetry" element={
-            <ProtectedRoute>
-              <PoetryAppreciate />
-            </ProtectedRoute>
-          } />
-          <Route path="/ldy/couplet" element={
-            <ProtectedRoute>
-              <Couplet />
-            </ProtectedRoute>
-          } />
-          <Route path="/ldy/essay" element={
-            <ProtectedRoute>
-              <EssayReview />
             </ProtectedRoute>
           } />
           

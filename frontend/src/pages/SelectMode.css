@@ -58,12 +58,12 @@
   z-index: 10;
 }
 
-.select-header .ldy-title {
+.select-header .select-title-text {
   text-align: center;
   flex: 1;
 }
 
-.select-header .ldy-title .quote {
+.select-header .select-title-text .quote {
   font-size: 1.2rem;
   color: #5a8a7a;
   margin: 0;
@@ -227,7 +227,7 @@
     padding: 0.8rem 1rem;
   }
 
-  .select-header .ldy-title h1 {
+  .select-header .select-title-text h1 {
     font-size: 1.2rem;
   }
 }

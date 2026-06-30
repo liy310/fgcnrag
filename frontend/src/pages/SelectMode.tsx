@@ -9,7 +9,7 @@ export default function SelectMode() {
   return (
     <div className="select-container">
       <header className="select-header">
-        <div className="ldy-title">
+        <div className="select-title-text">
           <p className="quote">「腹有诗书气自华」</p>
         </div>
         <div className="user-info">
@@ -19,7 +19,7 @@ export default function SelectMode() {
       </header>
 
       <main className="select-main">
-        <h1 className="select-title">选择学习模块</h1>
+        <h1 className="select-title">四大名著</h1>
 
         <div className="mode-cards">
           <div className="mode-card classic" onClick={() => navigate('/four-classic')}>
@@ -33,20 +33,6 @@ export default function SelectMode() {
               <span>西游记</span>
               <span>水浒传</span>
               <span>三国演义</span>
-            </div>
-          </div>
-
-          <div className="mode-card ldy" onClick={() => navigate('/ldy')}>
-            <div className="card-icon">
-              <img src="/picture/林黛玉图标.png" alt="林黛玉" />
-            </div>
-            <h2>林黛玉</h2>
-            <p>与颦儿吟诗作对，谈古论今，体验大观园的诗意人生</p>
-            <div className="card-tags">
-              <span>飞花令</span>
-              <span>诗词鉴赏</span>
-              <span>对对联</span>
-              <span>作文点评</span>
             </div>
           </div>
         </div>
